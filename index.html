@@ -1,0 +1,2198 @@
+```html
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>HSK 2.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --dead-zone: 42px;
+      --duo-green: #58CC02;
+      --duo-green-dark: #46A302;
+      --duo-blue: #1CB0F6;
+      --duo-blue-dark: #1899D6;
+      --duo-yellow: #FFC800;
+      --duo-yellow-dark: #D9A700;
+      --duo-red: #FF4B4B;
+      --duo-red-dark: #EA2B2B;
+      --duo-purple: #CE82FF;
+      --duo-purple-dark: #A560E8;
+      --surface-bg: #131F24;
+      --card-bg: #1A2B32;
+      --card-border: #2B404A;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: var(--surface-bg);
+      color: #FFFFFF;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overscroll-behavior: none;
+    }
+
+    /* Hán tự bắt buộc dùng KaiTi tô đậm nổi bật */
+    .hanzi-text {
+      font-family: 'KaiTi', 'STKaiti', 'BiauKai', 'DFKai-SB', 'Kaiti SC', '楷体', '楷体_GB2312', serif !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.03em;
+      line-height: 1.25;
+      color: #FFFFFF;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Nghĩa Tiếng Việt bắt buộc dùng Times New Roman */
+    .vn-text {
+      font-family: 'Times New Roman', Times, serif !important;
+      line-height: 1.35;
+    }
+
+    /* Pinyin chuẩn không lỗi */
+    .pinyin-text {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif !important;
+      font-weight: 600;
+      color: #77D4FC;
+      letter-spacing: 0.02em;
+    }
+
+    /* Vùng 1cm (~42px) mép trái bị liệt cảm ứng: Chỉ hiển thị tiến độ học tập */
+    #left-progress-rail {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: var(--dead-zone);
+      z-index: 100;
+      pointer-events: none;
+      background: linear-gradient(180deg, #0E171B 0%, #16242B 100%);
+      border-right: 2px solid #243842;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 3px;
+    }
+
+    /* Vùng tương tác an toàn bên phải vùng 1cm */
+    #app-safe-area {
+      margin-left: var(--dead-zone);
+      width: calc(100vw - var(--dead-zone));
+      height: 100dvh;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--surface-bg);
+    }
+
+    /* Nút bấm 3D phong cách Duolingo mượt 120fps */
+    .duo-btn {
+      position: relative;
+      border-radius: 16px;
+      font-weight: 800;
+      transition: transform 0.08s cubic-bezier(0.2, 0, 0, 1), background-color 0.12s ease, border-color 0.12s ease;
+      will-change: transform;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .duo-btn:active:not(:disabled) {
+      transform: translate3d(0, 3px, 0);
+    }
+
+    .duo-btn-green {
+      background-color: var(--duo-green);
+      border: 2px solid var(--duo-green);
+      border-bottom: 5px solid var(--duo-green-dark);
+      color: #FFFFFF;
+    }
+
+    .duo-btn-blue {
+      background-color: var(--duo-blue);
+      border: 2px solid var(--duo-blue);
+      border-bottom: 5px solid var(--duo-blue-dark);
+      color: #FFFFFF;
+    }
+
+    .duo-btn-yellow {
+      background-color: var(--duo-yellow);
+      border: 2px solid var(--duo-yellow);
+      border-bottom: 5px solid var(--duo-yellow-dark);
+      color: #131F24;
+    }
+
+    .duo-btn-red {
+      background-color: var(--duo-red);
+      border: 2px solid var(--duo-red);
+      border-bottom: 5px solid var(--duo-red-dark);
+      color: #FFFFFF;
+    }
+
+    .duo-btn-outline {
+      background-color: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-bottom: 5px solid #20313A;
+      color: #E5E7EB;
+    }
+
+    .duo-btn-selected {
+      background-color: rgba(28, 176, 246, 0.18) !important;
+      border: 2px solid var(--duo-blue) !important;
+      border-bottom: 5px solid var(--duo-blue-dark) !important;
+      color: #77D4FC !important;
+    }
+
+    .duo-btn-correct {
+      background-color: rgba(88, 204, 2, 0.22) !important;
+      border: 2px solid var(--duo-green) !important;
+      border-bottom: 5px solid var(--duo-green-dark) !important;
+      color: #89E219 !important;
+    }
+
+    .duo-btn-wrong {
+      background-color: rgba(255, 75, 75, 0.22) !important;
+      border: 2px solid var(--duo-red) !important;
+      border-bottom: 5px solid var(--duo-red-dark) !important;
+      color: #FF7878 !important;
+    }
+
+    .duo-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* Chuyển cảnh 120FPS GPU Accelerated */
+    .screen-view {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 12px 14px 10px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate3d(18px, 0, 0);
+      transition: opacity 0.18s cubic-bezier(0.22, 1, 0.36, 1), transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform, opacity;
+    }
+
+    .screen-view.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate3d(0, 0, 0);
+    }
+
+    /* Cuộn danh sách mượt mà không hiện thanh cuộn thô */
+    .clean-scroll {
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .clean-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Thanh tiến độ dọc ở mép trái 1cm */
+    .rail-bar-track {
+      width: 12px;
+      flex: 1;
+      margin: 8px 0;
+      background: #0A1114;
+      border-radius: 999px;
+      border: 1px solid #263B46;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      position: relative;
+    }
+
+    .rail-bar-fill {
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(180deg, #89E219 0%, #58CC02 100%);
+      border-radius: 999px;
+      transition: height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: height;
+      box-shadow: 0 0 10px rgba(88, 204, 2, 0.55);
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale3d(1, 1, 1); }
+      50% { transform: scale3d(1.04, 1.04, 1); }
+    }
+
+    .pulse-start {
+      animation: pulseGlow 2.2s infinite ease-in-out;
+    }
+
+    @keyframes shakeError {
+      0%, 100% { transform: translate3d(0, 0, 0); }
+      20% { transform: translate3d(-7px, 0, 0); }
+      40% { transform: translate3d(7px, 0, 0); }
+      60% { transform: translate3d(-5px, 0, 0); }
+      80% { transform: translate3d(5px, 0, 0); }
+    }
+
+    .shake-anim {
+      animation: shakeError 0.34s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- VÙNG 1CM MÉP TRÁI (42PX): CHỈ HIỂN THỊ TIẾN ĐỘ HỌC TẬP -->
+  <aside id="left-progress-rail" aria-hidden="true">
+    <!-- Streak -->
+    <div class="flex flex-col items-center">
+      <span class="text-base leading-none">🔥</span>
+      <span id="rail-streak" class="text-[11px] font-extrabold text-amber-400 mt-0.5">1</span>
+    </div>
+
+    <!-- Sao / Từ đã thuộc -->
+    <div class="flex flex-col items-center mt-2">
+      <span class="text-sm leading-none">⭐</span>
+      <span id="rail-stars" class="text-[10px] font-extrabold text-yellow-300 mt-0.5">0</span>
+    </div>
+
+    <!-- Thanh tiến độ dọc -->
+    <div class="rail-bar-track">
+      <div id="rail-progress-fill" class="rail-bar-fill" style="height: 0%;"></div>
+    </div>
+
+    <!-- Phần trăm tiến độ -->
+    <div class="flex flex-col items-center mb-1">
+      <span id="rail-percent" class="text-[10px] font-black text-lime-400">0%</span>
+      <span id="rail-level-tag" class="text-[9px] font-bold text-sky-400 mt-0.5">HSK1</span>
+    </div>
+  </aside>
+
+  <!-- VÙNG HIỂN THỊ & TƯƠNG TÁC CHÍNH -->
+  <main id="app-safe-area">
+    <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+    <!-- MÀN HÌNH 1: ĐỒNG HỒ THỜI GIAN THỰC & NÚT START -->
+    <section id="screen-clock" class="screen-view active justify-between items-center py-4">
+      <div class="w-full flex flex-col items-center mt-2">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1A2B32] border border-[#2B404A]">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#58CC02] animate-ping"></span>
+          <span id="clock-date" class="vn-text text-sm font-bold text-sky-300 tracking-wide"></span>
+        </div>
+      </div>
+
+      <!-- Khối Đồng Hồ Thời Gian Thực -->
+      <div class="w-full max-w-sm bg-[#1A2B32] border-2 border-[#2B404A] rounded-3xl p-6 flex flex-col items-center shadow-2xl">
+        <div id="clock-time" class="text-[clamp(2.6rem,11vw,4.2rem)] font-black tracking-wider text-white tabular-nums leading-none">
+          00:00:00
+        </div>
+        <div class="mt-4 flex items-center justify-center gap-3">
+          <span class="hanzi-text text-3xl text-amber-300">汉语水平考试</span>
+        </div>
+        <div class="pinyin-text text-xs mt-1">Hàn yǔ Shuǐ píng Kǎo shì</div>
+
+        <!-- Thống kê nhanh -->
+        <div class="w-full grid grid-cols-3 gap-2 mt-6">
+          <div class="bg-[#131F24] border border-[#2B404A] rounded-2xl p-2.5 flex flex-col items-center">
+            <span class="text-lg">🔥</span>
+            <span id="home-streak" class="text-base font-black text-amber-400">1</span>
+            <span class="vn-text text-xs text-slate-300">Ngày học</span>
+          </div>
+          <div class="bg-[#131F24] border border-[#2B404A] rounded-2xl p-2.5 flex flex-col items-center">
+            <span class="text-lg">📖</span>
+            <span id="home-mastered" class="text-base font-black text-lime-400">0</span>
+            <span class="vn-text text-xs text-slate-300">Từ đã thuộc</span>
+          </div>
+          <div class="bg-[#131F24] border border-[#2B404A] rounded-2xl p-2.5 flex flex-col items-center">
+            <span class="text-lg">🏆</span>
+            <span id="home-topics" class="text-base font-black text-sky-400">0/12</span>
+            <span class="vn-text text-xs text-slate-300">Chủ đề</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nút START -->
+      <div class="w-full max-w-sm flex flex-col gap-3 mb-2">
+        <button id="btn-start-app" onclick="App.openLevelScreen()" class="duo-btn duo-btn-green pulse-start w-full py-4 text-xl tracking-wider uppercase shadow-lg">
+          START
+        </button>
+      </div>
+    </section>
+
+    <!-- MÀN HÌNH 2: DANH SÁCH CẤP ĐỘ HSK 1 - HSK 6 (GIÁO TRÌNH 2.0) -->
+    <section id="screen-levels" class="screen-view">
+      <div class="flex items-center justify-between pb-2.5 mb-2 border-b border-[#243842]">
+        <div>
+          <h1 class="vn-text text-xl font-bold text-white">Cấp Độ HSK 2.0</h1>
+          <p class="vn-text text-xs text-slate-300">Chọn cấp độ để vào danh sách chủ đề</p>
+        </div>
+        <button onclick="App.openClockScreen()" class="duo-btn duo-btn-outline px-3.5 py-2 text-xs vn-text font-bold">
+          ⏱ Đồng hồ
+        </button>
+      </div>
+
+      <!-- Danh sách dọc HSK 1 -> HSK 6 -->
+      <div id="level-list-container" class="clean-scroll flex-1 flex flex-col gap-2.5 pb-4"></div>
+
+      <!-- Input ẩn để nạp dữ liệu JSON cho các cấp độ -->
+      <input type="file" id="json-file-input" accept=".json" class="hidden" onchange="App.handleFileImport(event)" />
+    </section>
+
+    <!-- MÀN HÌNH 3: DANH SÁCH TOPIC CỦA CẤP ĐỘ -->
+    <section id="screen-topics" class="screen-view">
+      <div class="flex items-center justify-between pb-2.5 mb-2 border-b border-[#243842]">
+        <div class="pr-2">
+          <div class="flex items-center gap-2">
+            <span id="topic-screen-badge" class="px-2.5 py-0.5 rounded-lg bg-lime-500/20 text-lime-400 text-xs font-black">HSK 1</span>
+            <h2 id="topic-screen-title" class="vn-text text-lg font-bold text-white truncate">Chủ đề từ vựng</h2>
+          </div>
+          <p id="topic-screen-subtitle" class="vn-text text-xs text-slate-300 mt-0.5">150 từ vựng chuẩn HSK 2.0</p>
+        </div>
+        <button onclick="App.openLevelScreen()" class="duo-btn duo-btn-outline px-3.5 py-2 text-xs vn-text font-bold shrink-0">
+          Danh sách HSK ↩
+        </button>
+      </div>
+
+      <!-- Danh sách dọc các Topic -->
+      <div id="topic-list-container" class="clean-scroll flex-1 flex flex-col gap-2.5 pb-4"></div>
+    </section>
+
+    <!-- MÀN HÌNH 4: GIAO DIỆN HỌC TƯƠNG TÁC DUOLINGO -->
+    <section id="screen-lesson" class="screen-view justify-between">
+      <!-- Đầu trang gọn -->
+      <div class="flex items-center justify-between pb-2 border-b border-[#243842] shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <span id="lesson-topic-icon" class="text-xl shrink-0">📘</span>
+          <div class="min-w-0">
+            <div id="lesson-topic-name" class="vn-text text-sm font-bold text-white truncate">Chủ đề</div>
+            <div id="lesson-step-counter" class="vn-text text-xs text-lime-400 font-bold">Câu 1 / 12</div>
+          </div>
+        </div>
+        <button onclick="App.quitLesson()" class="duo-btn duo-btn-outline px-3 py-1.5 text-xs vn-text font-bold shrink-0">
+          Chủ đề ✕
+        </button>
+      </div>
+
+      <!-- Thân câu hỏi co giãn vừa khít màn hình điện thoại -->
+      <div id="lesson-body" class="clean-scroll flex-1 flex flex-col justify-between py-2">
+        <!-- Loại câu hỏi & Khu vực hiển thị câu hỏi -->
+        <div id="question-stage" class="flex flex-col flex-1 justify-center"></div>
+      </div>
+
+      <!-- Khu vực phản hồi Đúng/Sai & Nút Kiểm Tra / Tiếp Tục -->
+      <div id="lesson-footer" class="pt-2 border-t border-[#243842] shrink-0">
+        <div id="feedback-banner" class="hidden mb-2.5 p-3 rounded-2xl border-2 flex items-center justify-between">
+          <div class="pr-2">
+            <div id="feedback-title" class="vn-text font-bold text-base"></div>
+            <div id="feedback-detail" class="vn-text text-sm mt-0.5"></div>
+          </div>
+          <button id="feedback-audio-btn" onclick="App.replayCurrentQuestionAudio()" class="duo-btn duo-btn-outline w-10 h-10 rounded-xl shrink-0 text-lg">
+            🔊
+          </button>
+        </div>
+
+        <button id="btn-lesson-action" onclick="App.handlePrimaryLessonAction()" class="duo-btn duo-btn-green w-full py-3.5 text-base vn-text font-bold tracking-wide">
+          KIỂM TRA
+        </button>
+      </div>
+    </section>
+
+    <!-- MÀN HÌNH 5: HOÀN THÀNH BÀI HỌC -->
+    <section id="screen-complete" class="screen-view justify-between items-center py-6">
+      <div class="flex flex-col items-center text-center mt-4">
+        <div class="text-6xl mb-3">🏆</div>
+        <h2 class="vn-text text-2xl font-bold text-amber-300">Hoàn Thành Chủ Đề!</h2>
+        <p id="complete-topic-title" class="vn-text text-base text-slate-200 mt-1"></p>
+      </div>
+
+      <div class="w-full max-w-xs grid grid-cols-2 gap-3 my-4">
+        <div class="bg-[#1A2B32] border-2 border-[#FFC800] rounded-2xl p-3.5 flex flex-col items-center">
+          <span class="vn-text text-xs text-amber-300 font-bold">Từ Đã Thuộc</span>
+          <span id="complete-words-count" class="text-2xl font-black text-white mt-1">+12</span>
+        </div>
+        <div class="bg-[#1A2B32] border-2 border-[#58CC02] rounded-2xl p-3.5 flex flex-col items-center">
+          <span class="vn-text text-xs text-lime-300 font-bold">Độ Chính Xác</span>
+          <span class="text-2xl font-black text-white mt-1">100%</span>
+        </div>
+      </div>
+
+      <div class="w-full max-w-sm flex flex-col gap-2.5">
+        <button onclick="App.restartCurrentTopic()" class="duo-btn duo-btn-blue w-full py-3.5 text-base vn-text font-bold">
+          LUYỆN TẬP LẠI
+        </button>
+        <button onclick="App.openTopicScreen(App.state.currentLevel)" class="duo-btn duo-btn-green w-full py-3.5 text-base vn-text font-bold">
+          DANH SÁCH CHỦ ĐỀ
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /********************************************************************
+     * DỮ LIỆU ĐẦY ĐỦ 100% HSK 1 (GIÁO TRÌNH 2.0 - 150 TỪ VỰNG & MẪU CÂU)
+     * Phân loại thành 12 Chủ đề học tương tác kiểu Duolingo
+     ********************************************************************/
+    const HSK1_TOPICS = [
+      {
+        id: "hsk1_t1",
+        title: "Đại từ & Giao tiếp cơ bản",
+        icon: "👋",
+        words: [
+          { hz: "我", py: "wǒ", vn: "tôi, mình" },
+          { hz: "你", py: "nǐ", vn: "bạn, anh, chị" },
+          { hz: "您", py: "nín", vn: "ngài, ông, bà (kính trọng)" },
+          { hz: "他", py: "tā", vn: "anh ấy, ông ấy" },
+          { hz: "她", py: "tā", vn: "cô ấy, bà ấy" },
+          { hz: "我们", py: "wǒmen", vn: "chúng tôi, chúng ta" },
+          { hz: "这", py: "zhè", vn: "này, đây" },
+          { hz: "那", py: "nà", vn: "kia, đó" },
+          { hz: "哪", py: "nǎ", vn: "nào" },
+          { hz: "谁", py: "shéi", vn: "ai, người nào" },
+          { hz: "什么", py: "shénme", vn: "cái gì, gì" },
+          { hz: "谢谢", py: "xièxie", vn: "cảm ơn" },
+          { hz: "不客气", py: "bú kèqi", vn: "đừng khách sáo" },
+          { hz: "再见", py: "zàijiàn", vn: "tạm biệt" },
+          { hz: "请", py: "qǐng", vn: "mời, xin" },
+          { hz: "对不起", py: "duìbuqǐ", vn: "xin lỗi" },
+          { hz: "没关系", py: "méi guānxi", vn: "không sao đâu" }
+        ],
+        sentences: [
+          {
+            vn: "Cảm ơn bạn rất nhiều.",
+            tokens: [
+              { hz: "非常", py: "fēicháng" },
+              { hz: "谢谢", py: "xièxie" },
+              { hz: "你", py: "nǐ" }
+            ],
+            distractors: [
+              { hz: "再见", py: "zàijiàn" },
+              { hz: "谁", py: "shéi" }
+            ]
+          },
+          {
+            vn: "Cái này là cái gì?",
+            tokens: [
+              { hz: "这", py: "zhè" },
+              { hz: "是", py: "shì" },
+              { hz: "什么", py: "shénme" }
+            ],
+            distractors: [
+              { hz: "那", py: "nà" },
+              { hz: "哪", py: "nǎ" }
+            ]
+          },
+          {
+            vn: "Cô ấy là ai?",
+            tokens: [
+              { hz: "她", py: "tā" },
+              { hz: "是", py: "shì" },
+              { hz: "谁", py: "shéi" }
+            ],
+            distractors: [
+              { hz: "我们", py: "wǒmen" },
+              { hz: "请", py: "qǐng" }
+            ]
+          },
+          {
+            vn: "Xin lỗi, không sao đâu.",
+            tokens: [
+              { hz: "对不起", py: "duìbuqǐ" },
+              { hz: "没关系", py: "méi guānxi" }
+            ],
+            distractors: [
+              { hz: "不客气", py: "bú kèqi" },
+              { hz: "他", py: "tā" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t2",
+        title: "Số đếm & Lượng từ",
+        icon: "🔢",
+        words: [
+          { hz: "零", py: "líng", vn: "số không (0)" },
+          { hz: "一", py: "yī", vn: "số một (1)" },
+          { hz: "二", py: "èr", vn: "số hai (2)" },
+          { hz: "三", py: "sān", vn: "số ba (3)" },
+          { hz: "四", py: "sì", vn: "số bốn (4)" },
+          { hz: "五", py: "wǔ", vn: "số năm (5)" },
+          { hz: "六", py: "liù", vn: "số sáu (6)" },
+          { hz: "七", py: "qī", vn: "số bảy (7)" },
+          { hz: "八", py: "bā", vn: "số tám (8)" },
+          { hz: "九", py: "jiǔ", vn: "số chín (9)" },
+          { hz: "十", py: "shí", vn: "số mười (10)" },
+          { hz: "百", py: "bǎi", vn: "trăm (100)" },
+          { hz: "个", py: "gè", vn: "cái, chiếc, người" },
+          { hz: "岁", py: "suì", vn: "tuổi" },
+          { hz: "本", py: "běn", vn: "quyển, cuốn" },
+          { hz: "些", py: "xiē", vn: "một vài, một số" },
+          { hz: "块", py: "kuài", vn: "đồng (tiền tệ), miếng" },
+          { hz: "几", py: "jǐ", vn: "mấy, vài" },
+          { hz: "多少", py: "duōshao", vn: "bao nhiêu" }
+        ],
+        sentences: [
+          {
+            vn: "Tôi có ba quyển sách.",
+            tokens: [
+              { hz: "我", py: "wǒ" },
+              { hz: "有", py: "yǒu" },
+              { hz: "三", py: "sān" },
+              { hz: "本", py: "běn" },
+              { hz: "书", py: "shū" }
+            ],
+            distractors: [
+              { hz: "岁", py: "suì" },
+              { hz: "八", py: "bā" }
+            ]
+          },
+          {
+            vn: "Năm nay bạn bao nhiêu tuổi?",
+            tokens: [
+              { hz: "你", py: "nǐ" },
+              { hz: "今年", py: "jīnnián" },
+              { hz: "几", py: "jǐ" },
+              { hz: "岁", py: "suì" }
+            ],
+            distractors: [
+              { hz: "块", py: "kuài" },
+              { hz: "百", py: "bǎi" }
+            ]
+          },
+          {
+            vn: "Cái này năm mươi đồng.",
+            tokens: [
+              { hz: "这", py: "zhè" },
+              { hz: "个", py: "gè" },
+              { hz: "五", py: "wǔ" },
+              { hz: "十", py: "shí" },
+              { hz: "块", py: "kuài" }
+            ],
+            distractors: [
+              { hz: "本", py: "běn" },
+              { hz: "九", py: "jiǔ" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t3",
+        title: "Thời gian & Ngày tháng",
+        icon: "⏰",
+        words: [
+          { hz: "今天", py: "jīntiān", vn: "hôm nay" },
+          { hz: "明天", py: "míngtiān", vn: "ngày mai" },
+          { hz: "昨天", py: "zuótiān", vn: "hôm qua" },
+          { hz: "上午", py: "shàngwǔ", vn: "buổi sáng" },
+          { hz: "中午", py: "zhōngwǔ", vn: "buổi trưa" },
+          { hz: "下午", py: "xiàwǔ", vn: "buổi chiều" },
+          { hz: "年", py: "nián", vn: "năm" },
+          { hz: "月", py: "yuè", vn: "tháng" },
+          { hz: "日", py: "rì", vn: "ngày" },
+          { hz: "星期", py: "xīngqī", vn: "tuần, thứ" },
+          { hz: "点", py: "diǎn", vn: "giờ" },
+          { hz: "分", py: "fēn", vn: "phút" },
+          { hz: "分钟", py: "fēnzhōng", vn: "phút (khoảng thời gian)" },
+          { hz: "现在", py: "xiànzài", vn: "bây giờ, hiện tại" },
+          { hz: "时候", py: "shíhou", vn: "lúc, khi" }
+        ],
+        sentences: [
+          {
+            vn: "Bây giờ là tám giờ sáng.",
+            tokens: [
+              { hz: "现在", py: "xiànzài" },
+              { hz: "上午", py: "shàngwǔ" },
+              { hz: "八", py: "bā" },
+              { hz: "点", py: "diǎn" }
+            ],
+            distractors: [
+              { hz: "昨天", py: "zuótiān" },
+              { hz: "月", py: "yuè" }
+            ]
+          },
+          {
+            vn: "Ngày mai là thứ mấy?",
+            tokens: [
+              { hz: "明天", py: "míngtiān" },
+              { hz: "星期", py: "xīngqī" },
+              { hz: "几", py: "jǐ" }
+            ],
+            distractors: [
+              { hz: "中午", py: "zhōngwǔ" },
+              { hz: "年", py: "nián" }
+            ]
+          },
+          {
+            vn: "Hôm nay là ngày một tháng chín.",
+            tokens: [
+              { hz: "今天", py: "jīntiān" },
+              { hz: "九", py: "jiǔ" },
+              { hz: "月", py: "yuè" },
+              { hz: "一", py: "yī" },
+              { hz: "日", py: "rì" }
+            ],
+            distractors: [
+              { hz: "下午", py: "xiàwǔ" },
+              { hz: "分钟", py: "fēnzhōng" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t4",
+        title: "Gia đình & Con người",
+        icon: "👨‍👩‍👧‍👦",
+        words: [
+          { hz: "家", py: "jiā", vn: "nhà, gia đình" },
+          { hz: "爸爸", py: "bàba", vn: "bố, ba" },
+          { hz: "妈妈", py: "māma", vn: "mẹ, má" },
+          { hz: "儿子", py: "érzi", vn: "con trai" },
+          { hz: "女儿", py: "nǚ'ér", vn: "con gái" },
+          { hz: "朋友", py: "péngyou", vn: "bạn bè" },
+          { hz: "同学", py: "tóngxué", vn: "bạn cùng lớp" },
+          { hz: "老师", py: "lǎoshī", vn: "giáo viên, thầy cô" },
+          { hz: "学生", py: "xuésheng", vn: "học sinh, sinh viên" },
+          { hz: "医生", py: "yīshēng", vn: "bác sĩ" },
+          { hz: "先生", py: "xiānsheng", vn: "ông, ngài, chồng" },
+          { hz: "小姐", py: "xiǎojiě", vn: "cô, tiểu thư" },
+          { hz: "人", py: "rén", vn: "người" },
+          { hz: "名字", py: "míngzi", vn: "tên" }
+        ],
+        sentences: [
+          {
+            vn: "Bố tôi là bác sĩ.",
+            tokens: [
+              { hz: "我", py: "wǒ" },
+              { hz: "爸爸", py: "bàba" },
+              { hz: "是", py: "shì" },
+              { hz: "医生", py: "yīshēng" }
+            ],
+            distractors: [
+              { hz: "女儿", py: "nǚ'ér" },
+              { hz: "名字", py: "míngzi" }
+            ]
+          },
+          {
+            vn: "Cô ấy là giáo viên của chúng tôi.",
+            tokens: [
+              { hz: "她", py: "tā" },
+              { hz: "是", py: "shì" },
+              { hz: "我们", py: "wǒmen" },
+              { hz: "的", py: "de" },
+              { hz: "老师", py: "lǎoshī" }
+            ],
+            distractors: [
+              { hz: "儿子", py: "érzi" },
+              { hz: "先生", py: "xiānsheng" }
+            ]
+          },
+          {
+            vn: "Anh ấy là bạn học tốt của tôi.",
+            tokens: [
+              { hz: "他", py: "tā" },
+              { hz: "是", py: "shì" },
+              { hz: "我", py: "wǒ" },
+              { hz: "的", py: "de" },
+              { hz: "好", py: "hǎo" },
+              { hz: "同学", py: "tóngxué" }
+            ],
+            distractors: [
+              { hz: "妈妈", py: "māma" },
+              { hz: "小姐", py: "xiǎojiě" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t5",
+        title: "Ẩm thực & Đồ uống",
+        icon: "🍜",
+        words: [
+          { hz: "水", py: "shuǐ", vn: "nước" },
+          { hz: "茶", py: "chá", vn: "trà" },
+          { hz: "米饭", py: "mǐfàn", vn: "cơm" },
+          { hz: "菜", py: "cài", vn: "món ăn, rau" },
+          { hz: "水果", py: "shuǐguǒ", vn: "trái cây, hoa quả" },
+          { hz: "苹果", py: "píngguǒ", vn: "quả táo" },
+          { hz: "杯子", py: "bēizi", vn: "cái cốc, cái ly" },
+          { hz: "吃", py: "chī", vn: "ăn" },
+          { hz: "喝", py: "hē", vn: "uống" },
+          { hz: "做", py: "zuò", vn: "làm, nấu" }
+        ],
+        sentences: [
+          {
+            vn: "Tôi muốn uống trà Trung Quốc.",
+            tokens: [
+              { hz: "我", py: "wǒ" },
+              { hz: "想", py: "xiǎng" },
+              { hz: "喝", py: "hē" },
+              { hz: "中国", py: "Zhōngguó" },
+              { hz: "茶", py: "chá" }
+            ],
+            distractors: [
+              { hz: "吃", py: "chī" },
+              { hz: "杯子", py: "bēizi" }
+            ]
+          },
+          {
+            vn: "Mẹ nấu món ăn rất ngon.",
+            tokens: [
+              { hz: "妈妈", py: "māma" },
+              { hz: "做", py: "zuò" },
+              { hz: "的", py: "de" },
+              { hz: "菜", py: "cài" },
+              { hz: "很", py: "hěn" },
+              { hz: "好", py: "hǎo" }
+            ],
+            distractors: [
+              { hz: "水", py: "shuǐ" },
+              { hz: "苹果", py: "píngguǒ" }
+            ]
+          },
+          {
+            vn: "Bạn thích ăn táo không?",
+            tokens: [
+              { hz: "你", py: "nǐ" },
+              { hz: "喜欢", py: "xǐhuan" },
+              { hz: "吃", py: "chī" },
+              { hz: "苹果", py: "píngguǒ" },
+              { hz: "吗", py: "ma" }
+            ],
+            distractors: [
+              { hz: "米饭", py: "mǐfàn" },
+              { hz: "喝", py: "hē" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t6",
+        title: "Địa điểm & Phương hướng",
+        icon: "📍",
+        words: [
+          { hz: "中国", py: "Zhōngguó", vn: "Trung Quốc" },
+          { hz: "北京", py: "Běijīng", vn: "Bắc Kinh" },
+          { hz: "学校", py: "xuéxiào", vn: "trường học" },
+          { hz: "饭店", py: "fàndiàn", vn: "nhà hàng, khách sạn" },
+          { hz: "商店", py: "shāngdiàn", vn: "cửa hàng" },
+          { hz: "医院", py: "yīyuàn", vn: "bệnh viện" },
+          { hz: "火车站", py: "huǒchēzhàn", vn: "ga tàu hỏa" },
+          { hz: "上", py: "shàng", vn: "trên, lên" },
+          { hz: "下", py: "xià", vn: "dưới, xuống" },
+          { hz: "前面", py: "qiánmiàn", vn: "phía trước" },
+          { hz: "后面", py: "hòumiàn", vn: "phía sau" },
+          { hz: "里", py: "lǐ", vn: "bên trong" },
+          { hz: "哪儿", py: "nǎr", vn: "ở đâu" }
+        ],
+        sentences: [
+          {
+            vn: "Trường học ở phía trước bệnh viện.",
+            tokens: [
+              { hz: "学校", py: "xuéxiào" },
+              { hz: "在", py: "zài" },
+              { hz: "医院", py: "yīyuàn" },
+              { hz: "前面", py: "qiánmiàn" }
+            ],
+            distractors: [
+              { hz: "火车站", py: "huǒchēzhàn" },
+              { hz: "下", py: "xià" }
+            ]
+          },
+          {
+            vn: "Bạn đi đâu vậy?",
+            tokens: [
+              { hz: "你", py: "nǐ" },
+              { hz: "去", py: "qù" },
+              { hz: "哪儿", py: "nǎr" }
+            ],
+            distractors: [
+              { hz: "饭店", py: "fàndiàn" },
+              { hz: "后面", py: "hòumiàn" }
+            ]
+          },
+          {
+            vn: "Anh ấy làm việc ở Bắc Kinh.",
+            tokens: [
+              { hz: "他", py: "tā" },
+              { hz: "在", py: "zài" },
+              { hz: "北京", py: "Běijīng" },
+              { hz: "工作", py: "gōngzuò" }
+            ],
+            distractors: [
+              { hz: "商店", py: "shāngdiàn" },
+              { hz: "里", py: "lǐ" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t7",
+        title: "Giao thông & Di chuyển",
+        icon: "✈️",
+        words: [
+          { hz: "飞机", py: "fēijī", vn: "máy bay" },
+          { hz: "出租车", py: "chūzūchē", vn: "xe taxi" },
+          { hz: "去", py: "qù", vn: "đi, đến" },
+          { hz: "来", py: "lái", vn: "đến, tới" },
+          { hz: "回", py: "huí", vn: "về, quay về" },
+          { hz: "坐", py: "zuò", vn: "ngồi, đi (bằng phương tiện)" },
+          { hz: "开", py: "kāi", vn: "lái (xe), mở" },
+          { hz: "住", py: "zhù", vn: "sống, ở" },
+          { hz: "在", py: "zài", vn: "ở, tại, đang" }
+        ],
+        sentences: [
+          {
+            vn: "Ngày mai tôi đi máy bay về nhà.",
+            tokens: [
+              { hz: "明天", py: "míngtiān" },
+              { hz: "我", py: "wǒ" },
+              { hz: "坐", py: "zuò" },
+              { hz: "飞机", py: "fēijī" },
+              { hz: "回", py: "huí" },
+              { hz: "家", py: "jiā" }
+            ],
+            distractors: [
+              { hz: "开", py: "kāi" },
+              { hz: "住", py: "zhù" }
+            ]
+          },
+          {
+            vn: "Chúng tôi đi taxi đến ga tàu hỏa.",
+            tokens: [
+              { hz: "我们", py: "wǒmen" },
+              { hz: "坐", py: "zuò" },
+              { hz: "出租车", py: "chūzūchē" },
+              { hz: "去", py: "qù" },
+              { hz: "火车站", py: "huǒchēzhàn" }
+            ],
+            distractors: [
+              { hz: "来", py: "lái" },
+              { hz: "飞机", py: "fēijī" }
+            ]
+          },
+          {
+            vn: "Bạn sống ở đâu?",
+            tokens: [
+              { hz: "你", py: "nǐ" },
+              { hz: "住", py: "zhù" },
+              { hz: "在", py: "zài" },
+              { hz: "哪儿", py: "nǎr" }
+            ],
+            distractors: [
+              { hz: "回", py: "huí" },
+              { hz: "开", py: "kāi" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t8",
+        title: "Giao tiếp & Nhận thức",
+        icon: "💬",
+        words: [
+          { hz: "说", py: "shuō", vn: "nói" },
+          { hz: "读", py: "dú", vn: "đọc" },
+          { hz: "写", py: "xiě", vn: "viết" },
+          { hz: "看", py: "kàn", vn: "nhìn, xem, đọc" },
+          { hz: "听", py: "tīng", vn: "nghe" },
+          { hz: "叫", py: "jiào", vn: "gọi là, tên là" },
+          { hz: "认识", py: "rènshi", vn: "quen biết" },
+          { hz: "会", py: "huì", vn: "biết (kỹ năng), sẽ" },
+          { hz: "能", py: "néng", vn: "có thể" },
+          { hz: "想", py: "xiǎng", vn: "muốn, nhớ, nghĩ" },
+          { hz: "爱", py: "ài", vn: "yêu, thích" },
+          { hz: "喜欢", py: "xǐhuan", vn: "thích" },
+          { hz: "是", py: "shì", vn: "là, đúng" },
+          { hz: "有", py: "yǒu", vn: "có" },
+          { hz: "没有", py: "méiyǒu", vn: "không có, chưa" }
+        ],
+        sentences: [
+          {
+            vn: "Tôi biết nói tiếng Trung Quốc.",
+            tokens: [
+              { hz: "我", py: "wǒ" },
+              { hz: "会", py: "huì" },
+              { hz: "说", py: "shuō" },
+              { hz: "汉语", py: "Hànyǔ" }
+            ],
+            distractors: [
+              { hz: "没有", py: "méiyǒu" },
+              { hz: "叫", py: "jiào" }
+            ]
+          },
+          {
+            vn: "Rất vui được quen biết bạn.",
+            tokens: [
+              { hz: "很", py: "hěn" },
+              { hz: "高兴", py: "gāoxìng" },
+              { hz: "认识", py: "rènshi" },
+              { hz: "你", py: "nǐ" }
+            ],
+            distractors: [
+              { hz: "写", py: "xiě" },
+              { hz: "听", py: "tīng" }
+            ]
+          },
+          {
+            vn: "Bạn tên là gì?",
+            tokens: [
+              { hz: "你", py: "nǐ" },
+              { hz: "叫", py: "jiào" },
+              { hz: "什么", py: "shénme" },
+              { hz: "名字", py: "míngzi" }
+            ],
+            distractors: [
+              { hz: "读", py: "dú" },
+              { hz: "能", py: "néng" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t9",
+        title: "Học tập & Công việc",
+        icon: "💻",
+        words: [
+          { hz: "字", py: "zì", vn: "chữ, chữ viết" },
+          { hz: "汉语", py: "Hànyǔ", vn: "tiếng Hán, tiếng Trung" },
+          { hz: "书", py: "shū", vn: "sách" },
+          { hz: "桌子", py: "zhuōzi", vn: "cái bàn" },
+          { hz: "椅子", py: "yǐzi", vn: "cái ghế" },
+          { hz: "电脑", py: "diànnǎo", vn: "máy vi tính" },
+          { hz: "电视", py: "diànshì", vn: "ti vi, truyền hình" },
+          { hz: "电影", py: "diànyǐng", vn: "phim, điện ảnh" },
+          { hz: "工作", py: "gōngzuò", vn: "công việc, làm việc" },
+          { hz: "学习", py: "xuéxí", vn: "học, học tập" },
+          { hz: "打电话", py: "dǎ diànhuà", vn: "gọi điện thoại" },
+          { hz: "睡觉", py: "shuìjiào", vn: "ngủ" },
+          { hz: "看见", py: "kànjiàn", vn: "nhìn thấy" },
+          { hz: "听见", py: "tīngjiàn", vn: "nghe thấy" }
+        ],
+        sentences: [
+          {
+            vn: "Trên bàn có một chiếc máy tính.",
+            tokens: [
+              { hz: "桌子", py: "zhuōzi" },
+              { hz: "上", py: "shàng" },
+              { hz: "有", py: "yǒu" },
+              { hz: "一", py: "yī" },
+              { hz: "个", py: "gè" },
+              { hz: "电脑", py: "diànnǎo" }
+            ],
+            distractors: [
+              { hz: "睡觉", py: "shuìjiào" },
+              { hz: "电影", py: "diànyǐng" }
+            ]
+          },
+          {
+            vn: "Tôi thích xem phim Trung Quốc.",
+            tokens: [
+              { hz: "我", py: "wǒ" },
+              { hz: "喜欢", py: "xǐhuan" },
+              { hz: "看", py: "kàn" },
+              { hz: "中国", py: "Zhōngguó" },
+              { hz: "电影", py: "diànyǐng" }
+            ],
+            distractors: [
+              { hz: "椅子", py: "yǐzi" },
+              { hz: "听见", py: "tīngjiàn" }
+            ]
+          },
+          {
+            vn: "Anh ấy đang gọi điện thoại.",
+            tokens: [
+              { hz: "他", py: "tā" },
+              { hz: "在", py: "zài" },
+              { hz: "打电话", py: "dǎ diànhuà" }
+            ],
+            distractors: [
+              { hz: "字", py: "zì" },
+              { hz: "电视", py: "diànshì" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t10",
+        title: "Mua sắm & Đời sống",
+        icon: "🛍️",
+        words: [
+          { hz: "钱", py: "qián", vn: "tiền" },
+          { hz: "衣服", py: "yīfu", vn: "quần áo" },
+          { hz: "东西", py: "dōngxi", vn: "đồ đạc, thứ, vật" },
+          { hz: "猫", py: "māo", vn: "con mèo" },
+          { hz: "狗", py: "gǒu", vn: "con chó" },
+          { hz: "买", py: "mǎi", vn: "mua" },
+          { hz: "多", py: "duō", vn: "nhiều" },
+          { hz: "少", py: "shǎo", vn: "ít" },
+          { hz: "大", py: "dà", vn: "to, lớn" },
+          { hz: "小", py: "xiǎo", vn: "nhỏ, bé" }
+        ],
+        sentences: [
+          {
+            vn: "Tôi đi cửa hàng mua quần áo.",
+            tokens: [
+              { hz: "我", py: "wǒ" },
+              { hz: "去", py: "qù" },
+              { hz: "商店", py: "shāngdiàn" },
+              { hz: "买", py: "mǎi" },
+              { hz: "衣服", py: "yīfu" }
+            ],
+            distractors: [
+              { hz: "猫", py: "māo" },
+              { hz: "少", py: "shǎo" }
+            ]
+          },
+          {
+            vn: "Cái này bao nhiêu tiền?",
+            tokens: [
+              { hz: "这", py: "zhè" },
+              { hz: "个", py: "gè" },
+              { hz: "多少", py: "duōshao" },
+              { hz: "钱", py: "qián" }
+            ],
+            distractors: [
+              { hz: "狗", py: "gǒu" },
+              { hz: "大", py: "dà" }
+            ]
+          },
+          {
+            vn: "Chú mèo nhỏ này rất đẹp.",
+            tokens: [
+              { hz: "这", py: "zhè" },
+              { hz: "个", py: "gè" },
+              { hz: "小", py: "xiǎo" },
+              { hz: "猫", py: "māo" },
+              { hz: "很", py: "hěn" },
+              { hz: "漂亮", py: "piàoliang" }
+            ],
+            distractors: [
+              { hz: "东西", py: "dōngxi" },
+              { hz: "多", py: "duō" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t11",
+        title: "Tính từ & Trạng thái",
+        icon: "🌤️",
+        words: [
+          { hz: "好", py: "hǎo", vn: "tốt, khỏe, ngon" },
+          { hz: "冷", py: "lěng", vn: "lạnh" },
+          { hz: "热", py: "rè", vn: "nóng" },
+          { hz: "高兴", py: "gāoxìng", vn: "vui vẻ, phấn khởi" },
+          { hz: "漂亮", py: "piàoliang", vn: "đẹp, xinh đẹp" },
+          { hz: "天气", py: "tiānqì", vn: "thời tiết" },
+          { hz: "怎么", py: "zěnme", vn: "như thế nào, sao" },
+          { hz: "怎么样", py: "zěnmeyàng", vn: "như thế nào, ra sao" },
+          { hz: "太", py: "tài", vn: "quá, lắm" },
+          { hz: "很", py: "hěn", vn: "rất" },
+          { hz: "不", py: "bù", vn: "không" },
+          { hz: "没", py: "méi", vn: "chưa, không" },
+          { hz: "都", py: "dōu", vn: "đều" },
+          { hz: "也", py: "yě", vn: "cũng" }
+        ],
+        sentences: [
+          {
+            vn: "Thời tiết hôm nay như thế nào?",
+            tokens: [
+              { hz: "今天", py: "jīntiān" },
+              { hz: "天气", py: "tiānqì" },
+              { hz: "怎么样", py: "zěnmeyàng" }
+            ],
+            distractors: [
+              { hz: "漂亮", py: "piàoliang" },
+              { hz: "都", py: "dōu" }
+            ]
+          },
+          {
+            vn: "Hôm nay thời tiết quá nóng.",
+            tokens: [
+              { hz: "今天", py: "jīntiān" },
+              { hz: "天气", py: "tiānqì" },
+              { hz: "太", py: "tài" },
+              { hz: "热", py: "rè" },
+              { hz: "了", py: "le" }
+            ],
+            distractors: [
+              { hz: "冷", py: "lěng" },
+              { hz: "也", py: "yě" }
+            ]
+          },
+          {
+            vn: "Chúng tôi đều rất vui vẻ.",
+            tokens: [
+              { hz: "我们", py: "wǒmen" },
+              { hz: "都", py: "dōu" },
+              { hz: "很", py: "hěn" },
+              { hz: "高兴", py: "gāoxìng" }
+            ],
+            distractors: [
+              { hz: "不", py: "bù" },
+              { hz: "怎么", py: "zěnme" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "hsk1_t12",
+        title: "Trợ từ & Liên từ câu",
+        icon: "🔗",
+        words: [
+          { hz: "的", py: "de", vn: "của (trợ từ sở hữu)" },
+          { hz: "了", py: "le", vn: "rồi (trợ từ ngữ khí)" },
+          { hz: "吗", py: "ma", vn: "không (trợ từ nghi vấn)" },
+          { hz: "呢", py: "ne", vn: "thế, nhỉ, vậy" },
+          { hz: "喂", py: "wèi", vn: "a-lô (khi nghe điện thoại)" },
+          { hz: "和", py: "hé", vn: "và, cùng với" }
+        ],
+        sentences: [
+          {
+            vn: "Tôi và bạn đều là học sinh.",
+            tokens: [
+              { hz: "我", py: "wǒ" },
+              { hz: "和", py: "hé" },
+              { hz: "你", py: "nǐ" },
+              { hz: "都", py: "dōu" },
+              { hz: "是", py: "shì" },
+              { hz: "学生", py: "xuésheng" }
+            ],
+            distractors: [
+              { hz: "喂", py: "wèi" },
+              { hz: "吗", py: "ma" }
+            ]
+          },
+          {
+            vn: "Tôi khỏe, còn bạn thì sao?",
+            tokens: [
+              { hz: "我", py: "wǒ" },
+              { hz: "很", py: "hěn" },
+              { hz: "好", py: "hǎo" },
+              { hz: "你", py: "nǐ" },
+              { hz: "呢", py: "ne" }
+            ],
+            distractors: [
+              { hz: "的", py: "de" },
+              { hz: "和", py: "hé" }
+            ]
+          },
+          {
+            vn: "Đây là sách của thầy giáo.",
+            tokens: [
+              { hz: "这", py: "zhè" },
+              { hz: "是", py: "shì" },
+              { hz: "老师", py: "lǎoshī" },
+              { hz: "的", py: "de" },
+              { hz: "书", py: "shū" }
+            ],
+            distractors: [
+              { hz: "了", py: "le" },
+              { hz: "呢", py: "ne" }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const HSK_LEVEL_META = [
+      { level: 1, title: "HSK 1", desc: "150 từ vựng nền tảng giao tiếp", totalWords: 150, color: "#58CC02" },
+      { level: 2, title: "HSK 2", desc: "300 từ vựng giao tiếp sinh hoạt", totalWords: 300, color: "#1CB0F6" },
+      { level: 3, title: "HSK 3", desc: "600 từ vựng thông dụng hàng ngày", totalWords: 600, color: "#FFC800" },
+      { level: 4, title: "HSK 4", desc: "1200 từ vựng thảo luận đa chủ đề", totalWords: 1200, color: "#CE82FF" },
+      { level: 5, title: "HSK 5", desc: "2500 từ vựng đọc báo & xem phim", totalWords: 2500, color: "#FF9600" },
+      { level: 6, title: "HSK 6", desc: "5000 từ vựng thành thạo học thuật", totalWords: 5000, color: "#FF4B4B" }
+    ];
+
+    /********************************************************************
+     * HỆ THỐNG ÂM THANH (WEB AUDIO API SYNTH + GIỌNG ĐỌC TIẾNG TRUNG)
+     ********************************************************************/
+    const SoundEngine = {
+      ctx: null,
+      zhVoice: null,
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === "suspended") {
+          this.ctx.resume();
+        }
+        this.loadVoices();
+      },
+
+      loadVoices() {
+        if (!("speechSynthesis" in window)) return;
+        const pickVoice = () => {
+          const voices = window.speechSynthesis.getVoices() || [];
+          this.zhVoice =
+            voices.find(v => v.lang === "zh-CN" && v.localService) ||
+            voices.find(v => v.lang === "zh-CN") ||
+            voices.find(v => v.lang && v.lang.toLowerCase().startsWith("zh")) ||
+            null;
+        };
+        pickVoice();
+        window.speechSynthesis.onvoiceschanged = pickVoice;
+      },
+
+      // Phát giọng đọc Hán tự ngay khi chọn từ
+      speakChinese(text) {
+        if (!text) return;
+        this.init();
+        if ("speechSynthesis" in window) {
+          try {
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = "zh-CN";
+            utter.rate = 0.92;
+            utter.pitch = 1.0;
+            if (this.zhVoice) utter.voice = this.zhVoice;
+            window.speechSynthesis.speak(utter);
+          } catch (e) {
+            // Bỏ qua lỗi nếu trình duyệt chặn tự động phát
+          }
+        }
+      },
+
+      // Hiệu ứng nhấn nút mượt mà
+      playTap() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(680, now + 0.045);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      },
+
+      // Hiệu ứng trả lời Đúng kiểu Duolingo
+      playCorrect() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [587.33, 880.0]; // D5 -> A5
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+          gain.gain.setValueAtTime(0.2, now + idx * 0.09);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.24);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.09);
+          osc.stop(now + idx * 0.09 + 0.25);
+        });
+      },
+
+      // Hiệu ứng trả lời Sai
+      playWrong() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [220, 185].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(freq, now + idx * 0.11);
+          gain.gain.setValueAtTime(0.14, now + idx * 0.11);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 0.18);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.11);
+          osc.stop(now + idx * 0.11 + 0.19);
+        });
+      },
+
+      // Hiệu ứng hoàn thành bài học
+      playVictory() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const chord = [523.25, 659.25, 783.99, 1046.5];
+        chord.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+          gain.gain.setValueAtTime(0.18, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.36);
+        });
+      }
+    };
+
+    /********************************************************************
+     * HIỆU ỨNG PHÁO GIẤY 120FPS
+     ********************************************************************/
+    const Confetti = {
+      particles: [],
+      animId: null,
+      launch() {
+        const canvas = document.getElementById("confetti-canvas");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const colors = ["#58CC02", "#1CB0F6", "#FFC800", "#FF4B4B", "#CE82FF"];
+        this.particles = Array.from({ length: 55 }, () => ({
+          x: Math.random() * canvas.width,
+          y: -20 - Math.random() * 80,
+          w: 7 + Math.random() * 6,
+          h: 10 + Math.random() * 8,
+          vx: (Math.random() - 0.5) * 4,
+          vy: 3 + Math.random() * 5,
+          rot: Math.random() * Math.PI * 2,
+          vrot: (Math.random() - 0.5) * 0.2,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        }));
+
+        if (this.animId) cancelAnimationFrame(this.animId);
+        const step = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          let alive = false;
+          for (const p of this.particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rot += p.vrot;
+            if (p.y < canvas.height + 20) alive = true;
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            ctx.restore();
+          }
+          if (alive) {
+            this.animId = requestAnimationFrame(step);
+          } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        };
+        this.animId = requestAnimationFrame(step);
+      }
+    };
+
+    /********************************************************************
+     * ỨNG DỤNG CHÍNH & QUẢN LÝ TIẾN ĐỘ HỌC TẬP
+     ********************************************************************/
+    const STORAGE_KEY = "HSK20_DUO_PROGRESS_V1";
+    const CUSTOM_DATA_KEY = "HSK20_CUSTOM_LEVELS_V1";
+
+    const App = {
+      state: {
+        currentScreen: "screen-clock",
+        currentLevel: 1,
+        currentTopicId: null,
+        pendingImportLevel: null,
+        streak: 1,
+        lastStudyDate: null,
+        completedTopics: {}, // { topicId: count }
+        masteredWords: {},   // { "我": true }
+        customLevels: {},    // { 2: [...topics], 3: [...topics] }
+        lesson: {
+          queue: [],
+          totalInitial: 0,
+          completedCount: 0,
+          currentQuestion: null,
+          selectedOptionIndex: null,
+          assembledTokens: [],
+          bankTokens: [],
+          answered: false,
+          isCorrect: false
+        }
+      },
+
+      init() {
+        this.loadStorage();
+        this.checkDailyStreak();
+        this.startRealTimeClock();
+        this.updateLeftRail();
+        this.updateHomeStats();
+        SoundEngine.loadVoices();
+      },
+
+      loadStorage() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            this.state.streak = parsed.streak || 1;
+            this.state.lastStudyDate = parsed.lastStudyDate || null;
+            this.state.completedTopics = parsed.completedTopics || {};
+            this.state.masteredWords = parsed.masteredWords || {};
+          }
+          const rawCustom = localStorage.getItem(CUSTOM_DATA_KEY);
+          if (rawCustom) {
+            this.state.customLevels = JSON.parse(rawCustom) || {};
+          }
+        } catch (e) {
+          // Khởi tạo mới nếu bộ nhớ trống
+        }
+      },
+
+      saveStorage() {
+        try {
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
+              streak: this.state.streak,
+              lastStudyDate: this.state.lastStudyDate,
+              completedTopics: this.state.completedTopics,
+              masteredWords: this.state.masteredWords
+            })
+          );
+        } catch (e) {}
+      },
+
+      checkDailyStreak() {
+        const today = new Date().toISOString().slice(0, 10);
+        if (!this.state.lastStudyDate) {
+          this.state.lastStudyDate = today;
+          this.state.streak = 1;
+          this.saveStorage();
+        } else if (this.state.lastStudyDate !== today) {
+          const prev = new Date(this.state.lastStudyDate);
+          const curr = new Date(today);
+          const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
+          if (diffDays === 1) {
+            this.state.streak += 1;
+          } else if (diffDays > 1) {
+            this.state.streak = 1;
+          }
+          this.state.lastStudyDate = today;
+          this.saveStorage();
+        }
+      },
+
+      // Đồng hồ thời gian thực ở màn hình chính
+      startRealTimeClock() {
+        const updateClock = () => {
+          const now = new Date();
+          const hh = String(now.getHours()).padStart(2, "0");
+          const mm = String(now.getMinutes()).padStart(2, "0");
+          const ss = String(now.getSeconds()).padStart(2, "0");
+          const timeEl = document.getElementById("clock-time");
+          if (timeEl) timeEl.textContent = `${hh}:${mm}:${ss}`;
+
+          const days = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+          const dayName = days[now.getDay()];
+          const dd = String(now.getDate()).padStart(2, "0");
+          const mo = String(now.getMonth() + 1).padStart(2, "0");
+          const yyyy = now.getFullYear();
+          const dateEl = document.getElementById("clock-date");
+          if (dateEl) dateEl.textContent = `${dayName}, ${dd}/${mo}/${yyyy}`;
+        };
+        updateClock();
+        setInterval(updateClock, 1000);
+      },
+
+      getTopicsForLevel(level) {
+        if (level === 1) return HSK1_TOPICS;
+        return this.state.customLevels[level] || [];
+      },
+
+      getLevelProgress(level) {
+        const topics = this.getTopicsForLevel(level);
+        if (!topics || topics.length === 0) return { completed: 0, total: 0, percent: 0 };
+        let completed = 0;
+        topics.forEach(t => {
+          if (this.state.completedTopics[t.id]) completed++;
+        });
+        const percent = Math.round((completed / topics.length) * 100);
+        return { completed, total: topics.length, percent };
+      },
+
+      // Cập nhật thanh tiến độ dọc ở vùng 1cm bên trái
+      updateLeftRail(customPercent = null) {
+        const streakEl = document.getElementById("rail-streak");
+        const starsEl = document.getElementById("rail-stars");
+        const fillEl = document.getElementById("rail-progress-fill");
+        const pctEl = document.getElementById("rail-percent");
+        const tagEl = document.getElementById("rail-level-tag");
+
+        const masteredCount = Object.keys(this.state.masteredWords).length;
+        if (streakEl) streakEl.textContent = this.state.streak;
+        if (starsEl) starsEl.textContent = masteredCount;
+        if (tagEl) tagEl.textContent = `HSK${this.state.currentLevel}`;
+
+        let pct = 0;
+        if (customPercent !== null) {
+          pct = Math.max(0, Math.min(100, Math.round(customPercent)));
+        } else {
+          pct = this.getLevelProgress(this.state.currentLevel).percent;
+        }
+        if (fillEl) fillEl.style.height = `${pct}%`;
+        if (pctEl) pctEl.textContent = `${pct}%`;
+      },
+
+      updateHomeStats() {
+        const masteredCount = Object.keys(this.state.masteredWords).length;
+        const hsk1Prog = this.getLevelProgress(1);
+        document.getElementById("home-streak").textContent = this.state.streak;
+        document.getElementById("home-mastered").textContent = masteredCount;
+        document.getElementById("home-topics").textContent = `${hsk1Prog.completed}/${hsk1Prog.total}`;
+      },
+
+      switchScreen(screenId) {
+        document.querySelectorAll(".screen-view").forEach(el => {
+          el.classList.remove("active");
+        });
+        const target = document.getElementById(screenId);
+        if (target) target.classList.add("active");
+        this.state.currentScreen = screenId;
+      },
+
+      openClockScreen() {
+        SoundEngine.playTap();
+        this.updateHomeStats();
+        this.updateLeftRail();
+        this.switchScreen("screen-clock");
+      },
+
+      openLevelScreen() {
+        SoundEngine.playTap();
+        this.renderLevelList();
+        this.updateLeftRail();
+        this.switchScreen("screen-levels");
+      },
+
+      renderLevelList() {
+        const container = document.getElementById("level-list-container");
+        container.innerHTML = "";
+
+        HSK_LEVEL_META.forEach(meta => {
+          const topics = this.getTopicsForLevel(meta.level);
+          const hasData = topics && topics.length > 0;
+          const prog = this.getLevelProgress(meta.level);
+
+          const item = document.createElement("div");
+          item.className = "bg-[#1A2B32] border-2 border-[#2B404A] rounded-2xl p-3.5 flex flex-col gap-2.5";
+
+          item.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base text-white shrink-0" style="background-color: ${meta.color}; box-shadow: 0 4px 0 rgba(0,0,0,0.25);">
+                  HSK${meta.level}
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="vn-text font-bold text-lg text-white">${meta.title}</span>
+                    <span class="vn-text text-xs px-2 py-0.5 rounded-full bg-[#131F24] text-sky-300 border border-[#2B404A]">${meta.totalWords} từ</span>
+                  </div>
+                  <p class="vn-text text-xs text-slate-300 truncate mt-0.5">${meta.desc}</p>
+                </div>
+              </div>
+
+              ${
+                hasData
+                  ? `<button onclick="App.openTopicScreen(${meta.level})" class="duo-btn duo-btn-green px-4 py-2.5 text-xs vn-text font-bold shrink-0">HỌC NGAY</button>`
+                  : `<button onclick="App.triggerImportLevel(${meta.level})" class="duo-btn duo-btn-blue px-3.5 py-2.5 text-xs vn-text font-bold shrink-0">NẠP FILE</button>`
+              }
+            </div>
+
+            <div class="w-full flex items-center gap-2.5">
+              <div class="flex-1 h-2.5 bg-[#131F24] rounded-full overflow-hidden border border-[#263B46]">
+                <div class="h-full rounded-full transition-all duration-300" style="width: ${prog.percent}%; background-color: ${meta.color};"></div>
+              </div>
+              <span class="vn-text text-xs font-bold text-slate-300 w-12 text-right">${hasData ? `${prog.completed}/${prog.total}` : "0%"}</span>
+            </div>
+          `;
+          container.appendChild(item);
+        });
+      },
+
+      triggerImportLevel(level) {
+        SoundEngine.playTap();
+        this.state.pendingImportLevel = level;
+        const input = document.getElementById("json-file-input");
+        input.value = "";
+        input.click();
+      },
+
+      handleFileImport(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file || !this.state.pendingImportLevel) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+          try {
+            const parsed = JSON.parse(e.target.result);
+            const topics = Array.isArray(parsed) ? parsed : parsed.topics;
+            if (Array.isArray(topics) && topics.length > 0) {
+              this.state.customLevels[this.state.pendingImportLevel] = topics;
+              localStorage.setItem(CUSTOM_DATA_KEY, JSON.stringify(this.state.customLevels));
+              SoundEngine.playCorrect();
+              this.renderLevelList();
+              this.openTopicScreen(this.state.pendingImportLevel);
+            }
+          } catch (err) {
+            SoundEngine.playWrong();
+          }
+        };
+        reader.readAsText(file);
+      },
+
+      openTopicScreen(level) {
+        SoundEngine.playTap();
+        this.state.currentLevel = level;
+        const topics = this.getTopicsForLevel(level);
+        if (!topics || topics.length === 0) {
+          this.triggerImportLevel(level);
+          return;
+        }
+
+        document.getElementById("topic-screen-badge").textContent = `HSK ${level}`;
+        document.getElementById("topic-screen-title").textContent = `Chủ đề HSK ${level}`;
+        const totalWordsCount = topics.reduce((acc, t) => acc + (t.words ? t.words.length : 0), 0);
+        document.getElementById("topic-screen-subtitle").textContent = `${topics.length} chủ đề • ${totalWordsCount} từ vựng`;
+
+        const container = document.getElementById("topic-list-container");
+        container.innerHTML = "";
+
+        topics.forEach((topic, index) => {
+          const doneCount = this.state.completedTopics[topic.id] || 0;
+          const isCompleted = doneCount > 0;
+          const masteredInTopic = (topic.words || []).filter(w => this.state.masteredWords[w.hz]).length;
+          const totalInTopic = (topic.words || []).length;
+          const pct = totalInTopic > 0 ? Math.round((masteredInTopic / totalInTopic) * 100) : 0;
+
+          const card = document.createElement("div");
+          card.className = "bg-[#1A2B32] border-2 border-[#2B404A] rounded-2xl p-3.5 flex flex-col gap-2.5";
+          card.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-11 h-11 rounded-2xl bg-[#131F24] border border-[#2B404A] flex items-center justify-center text-2xl shrink-0">
+                  ${topic.icon || "📘"}
+                </div>
+                <div class="min-w-0">
+                  <div class="vn-text font-bold text-base text-white truncate">${index + 1}. ${topic.title}</div>
+                  <div class="vn-text text-xs text-slate-300 mt-0.5">${totalInTopic} từ vựng • Đã thuộc ${masteredInTopic}/${totalInTopic}</div>
+                </div>
+              </div>
+              <button onclick="App.startTopicLesson('${topic.id}')" class="duo-btn ${isCompleted ? "duo-btn-yellow" : "duo-btn-green"} px-4 py-2.5 text-xs vn-text font-bold shrink-0">
+                ${isCompleted ? "ÔN TẬP ★" : "BẮT ĐẦU"}
+              </button>
+            </div>
+
+            <!-- Hiển thị nhanh các Hán tự trong chủ đề -->
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              ${(topic.words || [])
+                .map(
+                  w => `<span onclick="SoundEngine.speakChinese('${w.hz}')" class="hanzi-text text-base px-2 py-0.5 rounded-lg border cursor-pointer ${
+                    this.state.masteredWords[w.hz]
+                      ? "bg-lime-500/15 border-lime-500/40 text-lime-300"
+                      : "bg-[#131F24] border-[#263B46] text-slate-200"
+                  }">${w.hz}</span>`
+                )
+                .join("")}
+            </div>
+
+            <div class="w-full h-2 bg-[#131F24] rounded-full overflow-hidden border border-[#263B46]">
+              <div class="h-full rounded-full transition-all duration-300 bg-[#58CC02]" style="width: ${pct}%;"></div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+        this.updateLeftRail();
+        this.switchScreen("screen-topics");
+      },
+
+      /********************************************************************
+       * BỘ MÁY BÀI HỌC TƯƠNG TÁC DUOLINGO (3 DẠNG CÂU HỎI + SAI LÀM LẠI)
+       ********************************************************************/
+      startTopicLesson(topicId) {
+        SoundEngine.playTap();
+        const topics = this.getTopicsForLevel(this.state.currentLevel);
+        const topic = topics.find(t => t.id === topicId);
+        if (!topic) return;
+
+        this.state.currentTopicId = topicId;
+        document.getElementById("lesson-topic-icon").textContent = topic.icon || "📘";
+        document.getElementById("lesson-topic-name").textContent = topic.title;
+
+        const queue = this.buildLessonQueue(topic);
+        this.state.lesson = {
+          queue,
+          totalInitial: queue.length,
+          completedCount: 0,
+          currentQuestion: null,
+          selectedOptionIndex: null,
+          assembledTokens: [],
+          bankTokens: [],
+          answered: false,
+          isCorrect: false
+        };
+
+        this.updateLeftRail(0);
+        this.switchScreen("screen-lesson");
+        this.nextQuestion();
+      },
+
+      restartCurrentTopic() {
+        if (this.state.currentTopicId) {
+          this.startTopicLesson(this.state.currentTopicId);
+        }
+      },
+
+      quitLesson() {
+        SoundEngine.playTap();
+        this.openTopicScreen(this.state.currentLevel);
+      },
+
+      shuffle(arr) {
+        const copy = [...arr];
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+      },
+
+      buildLessonQueue(topic) {
+        const allWords = HSK1_TOPICS.flatMap(t => t.words);
+        const allSentences = HSK1_TOPICS.flatMap(t => t.sentences || []);
+        const questions = [];
+
+        // 1. Nhìn Hán Tự và Pinyin chọn Tiếng Việt cho toàn bộ từ trong Topic
+        (topic.words || []).forEach(word => {
+          const wrongPool = this.shuffle(allWords.filter(w => w.hz !== word.hz && w.vn !== word.vn)).slice(0, 3);
+          const options = this.shuffle([
+            { vn: word.vn, hz: word.hz, py: word.py, isCorrect: true },
+            ...wrongPool.map(w => ({ vn: w.vn, hz: w.hz, py: w.py, isCorrect: false }))
+          ]);
+
+          questions.push({
+            type: "word_to_vn",
+            word,
+            audioText: word.hz,
+            options,
+            correctText: `${word.hz} (${word.py}): ${word.vn}`
+          });
+        });
+
+        // 2. Chọn từ để hoàn thành câu & 3. Chọn nghĩa của câu
+        (topic.sentences || []).forEach(sent => {
+          const fullHz = sent.tokens.map(t => t.hz).join("");
+          const bankPool = this.shuffle([
+            ...sent.tokens.map((t, idx) => ({ ...t, id: `tok_${idx}_${Math.random()}` })),
+            ...(sent.distractors || []).map((d, idx) => ({ ...d, id: `dist_${idx}_${Math.random()}` }))
+          ]);
+
+          questions.push({
+            type: "sentence_builder",
+            vnPrompt: sent.vn,
+            targetTokens: sent.tokens,
+            bankPool,
+            audioText: fullHz,
+            correctText: `${fullHz} (${sent.tokens.map(t => t.py).join(" ")})`
+          });
+
+          // Câu hỏi chọn nghĩa Tiếng Việt của cả câu Hán tự
+          const wrongSentPool = this.shuffle(allSentences.filter(s => s.vn !== sent.vn)).slice(0, 3);
+          const sentOptions = this.shuffle([
+            { vn: sent.vn, isCorrect: true },
+            ...wrongSentPool.map(s => ({ vn: s.vn, isCorrect: false }))
+          ]);
+
+          questions.push({
+            type: "sentence_to_vn",
+            tokens: sent.tokens,
+            vnPrompt: sent.vn,
+            options: sentOptions,
+            audioText: fullHz,
+            correctText: sent.vn
+          });
+        });
+
+        return this.shuffle(questions);
+      },
+
+      nextQuestion() {
+        const lesson = this.state.lesson;
+        if (lesson.queue.length === 0) {
+          this.finishLesson();
+          return;
+        }
+
+        const q = lesson.queue.shift();
+        lesson.currentQuestion = q;
+        lesson.selectedOptionIndex = null;
+        lesson.assembledTokens = [];
+        lesson.bankTokens = q.type === "sentence_builder" ? [...q.bankPool] : [];
+        lesson.answered = false;
+        lesson.isCorrect = false;
+
+        // Cập nhật bộ đếm và thanh tiến độ 1cm bên trái
+        const totalSteps = lesson.completedCount + lesson.queue.length + 1;
+        document.getElementById("lesson-step-counter").textContent = `Câu ${lesson.completedCount + 1} / ${totalSteps}`;
+        const progressPct = (lesson.completedCount / Math.max(1, totalSteps)) * 100;
+        this.updateLeftRail(progressPct);
+
+        // Ẩn thanh thông báo kết quả cũ
+        const banner = document.getElementById("feedback-banner");
+        banner.classList.add("hidden");
+
+        const actionBtn = document.getElementById("btn-lesson-action");
+        actionBtn.textContent = "KIỂM TRA";
+        actionBtn.className = "duo-btn duo-btn-green w-full py-3.5 text-base vn-text font-bold tracking-wide";
+        actionBtn.disabled = true;
+
+        this.renderCurrentQuestion();
+
+        // Tự động phát âm Hán tự khi câu hỏi xuất hiện
+        if (q.audioText) {
+          setTimeout(() => SoundEngine.speakChinese(q.audioText), 120);
+        }
+      },
+
+      replayCurrentQuestionAudio() {
+        const q = this.state.lesson.currentQuestion;
+        if (q && q.audioText) {
+          SoundEngine.speakChinese(q.audioText);
+        }
+      },
+
+      renderCurrentQuestion() {
+        const stage = document.getElementById("question-stage");
+        const q = this.state.lesson.currentQuestion;
+        if (!q) return;
+
+        if (q.type === "word_to_vn") {
+          stage.innerHTML = `
+            <div class="flex flex-col items-center justify-center my-auto">
+              <div class="vn-text text-sm font-bold text-slate-300 mb-2">Chọn nghĩa Tiếng Việt đúng</div>
+
+              <!-- Thẻ Hán Tự KaiTi Tô Đậm & Pinyin -->
+              <div onclick="SoundEngine.speakChinese('${q.word.hz}')" class="w-full bg-[#1A2B32] border-2 border-[#2B404A] rounded-3xl py-5 px-4 flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-transform">
+                <div class="pinyin-text text-xl mb-1">${q.word.py}</div>
+                <div class="hanzi-text text-[clamp(3.2rem,14vw,4.8rem)]">${q.word.hz}</div>
+                <div class="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#131F24] text-sky-400 text-xs font-bold">
+                  <span>🔊</span>
+                  <span class="vn-text">Chạm để nghe</span>
+                </div>
+              </div>
+
+              <!-- 4 Đáp án Tiếng Việt (Times New Roman) -->
+              <div class="w-full grid grid-cols-1 gap-2.5 mt-4">
+                ${q.options
+                  .map(
+                    (opt, idx) => `
+                  <button
+                    id="opt-btn-${idx}"
+                    onclick="App.selectChoiceOption(${idx})"
+                    class="duo-btn duo-btn-outline w-full py-3.5 px-4 text-left flex items-center justify-between"
+                  >
+                    <span class="vn-text text-lg font-bold text-white">${opt.vn}</span>
+                    <span class="w-6 h-6 rounded-lg border border-[#3B5563] flex items-center justify-center text-xs text-slate-400 font-bold shrink-0">${idx + 1}</span>
+                  </button>
+                `
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `;
+        } else if (q.type === "sentence_builder") {
+          stage.innerHTML = `
+            <div class="flex flex-col justify-between my-auto gap-3">
+              <div>
+                <div class="vn-text text-sm font-bold text-slate-300 mb-1.5">Chọn từ để hoàn thành câu</div>
+                <div class="w-full bg-[#1A2B32] border-2 border-[#2B404A] rounded-2xl p-3.5 flex items-center justify-between gap-2">
+                  <div class="vn-text text-lg font-bold text-amber-300">${q.vnPrompt}</div>
+                  <button onclick="SoundEngine.speakChinese('${q.audioText}')" class="duo-btn duo-btn-blue w-10 h-10 rounded-xl shrink-0 text-base">🔊</button>
+                </div>
+              </div>
+
+              <!-- Khung câu đang ghép -->
+              <div id="sentence-slot-area" class="min-h-[88px] w-full bg-[#0E171B] border-2 border-dashed border-[#2B404A] rounded-2xl p-2.5 flex flex-wrap items-center gap-2"></div>
+
+              <!-- Kho từ vựng Hán tự + Pinyin -->
+              <div id="sentence-bank-area" class="w-full flex flex-wrap items-center justify-center gap-2 pt-1"></div>
+            </div>
+          `;
+          this.updateSentenceBuilderDOM();
+        } else if (q.type === "sentence_to_vn") {
+          stage.innerHTML = `
+            <div class="flex flex-col justify-between my-auto gap-3">
+              <div>
+                <div class="vn-text text-sm font-bold text-slate-300 mb-2">Chọn nghĩa đúng của câu</div>
+                <div class="w-full bg-[#1A2B32] border-2 border-[#2B404A] rounded-3xl p-4 flex flex-col items-center">
+                  <div class="flex flex-wrap items-center justify-center gap-3">
+                    ${q.tokens
+                      .map(
+                        t => `
+                      <div onclick="SoundEngine.speakChinese('${t.hz}')" class="flex flex-col items-center cursor-pointer active:scale-95 transition-transform px-1">
+                        <span class="pinyin-text text-xs">${t.py}</span>
+                        <span class="hanzi-text text-[clamp(1.9rem,8vw,2.6rem)]">${t.hz}</span>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                  <button onclick="SoundEngine.speakChinese('${q.audioText}')" class="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#131F24] text-sky-400 text-xs font-bold">
+                    <span>🔊</span>
+                    <span class="vn-text">Nghe cả câu</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 4 Lựa chọn nghĩa của câu (Times New Roman) -->
+              <div class="w-full grid grid-cols-1 gap-2.5">
+                ${q.options
+                  .map(
+                    (opt, idx) => `
+                  <button
+                    id="opt-btn-${idx}"
+                    onclick="App.selectChoiceOption(${idx})"
+                    class="duo-btn duo-btn-outline w-full py-3.5 px-4 text-left flex items-center justify-between"
+                  >
+                    <span class="vn-text text-base font-bold text-white">${opt.vn}</span>
+                    <span class="w-6 h-6 rounded-lg border border-[#3B5563] flex items-center justify-center text-xs text-slate-400 font-bold shrink-0">${idx + 1}</span>
+                  </button>
+                `
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `;
+        }
+      },
+
+      // Khi chọn phương án trắc nghiệm -> phát âm ngay chữ Hán đó
+      selectChoiceOption(index) {
+        const lesson = this.state.lesson;
+        if (lesson.answered) return;
+        SoundEngine.playTap();
+
+        lesson.selectedOptionIndex = index;
+        const q = lesson.currentQuestion;
+        const chosen = q.options[index];
+
+        // Đọc chữ Hán ngay khi chọn
+        if (chosen && chosen.hz) {
+          SoundEngine.speakChinese(chosen.hz);
+        } else if (q.audioText) {
+          SoundEngine.speakChinese(q.audioText);
+        }
+
+        q.options.forEach((_, idx) => {
+          const btn = document.getElementById(`opt-btn-${idx}`);
+          if (!btn) return;
+          if (idx === index) {
+            btn.classList.add("duo-btn-selected");
+          } else {
+            btn.classList.remove("duo-btn-selected");
+          }
+        });
+
+        document.getElementById("btn-lesson-action").disabled = false;
+      },
+
+      // Khi chạm vào thẻ từ Hán tự trong phần ghép câu -> đọc to chữ Hán đó ngay lập tức
+      tapBankToken(tokenId) {
+        const lesson = this.state.lesson;
+        if (lesson.answered) return;
+        const idx = lesson.bankTokens.findIndex(t => t.id === tokenId);
+        if (idx === -1) return;
+
+        const [tok] = lesson.bankTokens.splice(idx, 1);
+        lesson.assembledTokens.push(tok);
+
+        SoundEngine.playTap();
+        SoundEngine.speakChinese(tok.hz);
+
+        this.updateSentenceBuilderDOM();
+        document.getElementById("btn-lesson-action").disabled = lesson.assembledTokens.length === 0;
+      },
+
+      tapAssembledToken(tokenId) {
+        const lesson = this.state.lesson;
+        if (lesson.answered) return;
+        const idx = lesson.assembledTokens.findIndex(t => t.id === tokenId);
+        if (idx === -1) return;
+
+        const [tok] = lesson.assembledTokens.splice(idx, 1);
+        lesson.bankTokens.push(tok);
+
+        SoundEngine.playTap();
+        SoundEngine.speakChinese(tok.hz);
+
+        this.updateSentenceBuilderDOM();
+        document.getElementById("btn-lesson-action").disabled = lesson.assembledTokens.length === 0;
+      },
+
+      updateSentenceBuilderDOM() {
+        const lesson = this.state.lesson;
+        const slotArea = document.getElementById("sentence-slot-area");
+        const bankArea = document.getElementById("sentence-bank-area");
+        if (!slotArea || !bankArea) return;
+
+        slotArea.innerHTML = lesson.assembledTokens
+          .map(
+            t => `
+            <button onclick="App.tapAssembledToken('${t.id}')" class="duo-btn duo-btn-selected px-3 py-1.5 flex flex-col items-center">
+              <span class="pinyin-text text-[11px] leading-tight">${t.py}</span>
+              <span class="hanzi-text text-2xl leading-tight">${t.hz}</span>
+            </button>
+          `
+          )
+          .join("");
+
+        bankArea.innerHTML = lesson.bankTokens
+          .map(
+            t => `
+            <button onclick="App.tapBankToken('${t.id}')" class="duo-btn duo-btn-outline px-3.5 py-2 flex flex-col items-center">
+              <span class="pinyin-text text-xs leading-tight">${t.py}</span>
+              <span class="hanzi-text text-2xl leading-tight">${t.hz}</span>
+            </button>
+          `
+          )
+          .join("");
+      },
+
+      handlePrimaryLessonAction() {
+        const lesson = this.state.lesson;
+        if (!lesson.answered) {
+          this.checkAnswer();
+        } else {
+          SoundEngine.playTap();
+          this.nextQuestion();
+        }
+      },
+
+      checkAnswer() {
+        const lesson = this.state.lesson;
+        const q = lesson.currentQuestion;
+        if (!q) return;
+
+        lesson.answered = true;
+        let isCorrect = false;
+
+        if (q.type === "word_to_vn" || q.type === "sentence_to_vn") {
+          const chosen = q.options[lesson.selectedOptionIndex];
+          isCorrect = Boolean(chosen && chosen.isCorrect);
+
+          q.options.forEach((opt, idx) => {
+            const btn = document.getElementById(`opt-btn-${idx}`);
+            if (!btn) return;
+            btn.classList.remove("duo-btn-selected");
+            if (opt.isCorrect) {
+              btn.classList.add("duo-btn-correct");
+            } else if (idx === lesson.selectedOptionIndex && !opt.isCorrect) {
+              btn.classList.add("duo-btn-wrong");
+            }
+          });
+        } else if (q.type === "sentence_builder") {
+          const userSentence = lesson.assembledTokens.map(t => t.hz).join("");
+          const targetSentence = q.targetTokens.map(t => t.hz).join("");
+          isCorrect = userSentence === targetSentence;
+        }
+
+        lesson.isCorrect = isCorrect;
+        const banner = document.getElementById("feedback-banner");
+        const titleEl = document.getElementById("feedback-title");
+        const detailEl = document.getElementById("feedback-detail");
+        const actionBtn = document.getElementById("btn-lesson-action");
+
+        banner.classList.remove("hidden");
+
+        if (isCorrect) {
+          SoundEngine.playCorrect();
+          if (q.word && q.word.hz) {
+            this.state.masteredWords[q.word.hz] = true;
+            this.saveStorage();
+          }
+          lesson.completedCount += 1;
+
+          banner.className = "mb-2.5 p-3 rounded-2xl border-2 border-[#58CC02] bg-[#58CC02]/15 flex items-center justify-between";
+          titleEl.className = "vn-text font-bold text-base text-lime-400";
+          titleEl.textContent = "Chính xác!";
+          detailEl.className = "vn-text text-sm text-slate-200 mt-0.5";
+          detailEl.textContent = q.correctText;
+
+          actionBtn.textContent = "TIẾP TỤC";
+          actionBtn.className = "duo-btn duo-btn-green w-full py-3.5 text-base vn-text font-bold tracking-wide";
+        } else {
+          // SAI ĐẨY XUỐNG PHÍA SAU ĐỂ LÀM LẠI
+          SoundEngine.playWrong();
+          const stage = document.getElementById("question-stage");
+          stage.classList.remove("shake-anim");
+          void stage.offsetWidth;
+          stage.classList.add("shake-anim");
+
+          // Đẩy bản sao câu hỏi xuống cuối hàng đợi
+          const clonedQuestion = JSON.parse(JSON.stringify(q));
+          lesson.queue.push(clonedQuestion);
+
+          banner.className = "mb-2.5 p-3 rounded-2xl border-2 border-[#FF4B4B] bg-[#FF4B4B]/15 flex items-center justify-between";
+          titleEl.className = "vn-text font-bold text-base text-rose-400";
+          titleEl.textContent = "Chưa chính xác • Đã đẩy xuống cuối để làm lại";
+          detailEl.className = "vn-text text-sm text-white mt-0.5";
+          detailEl.textContent = `Đáp án: ${q.correctText}`;
+
+          actionBtn.textContent = "ĐÃ HIỂU";
+          actionBtn.className = "duo-btn duo-btn-red w-full py-3.5 text-base vn-text font-bold tracking-wide";
+        }
+
+        const totalSteps = lesson.completedCount + lesson.queue.length;
+        const progressPct = (lesson.completedCount / Math.max(1, totalSteps)) * 100;
+        this.updateLeftRail(progressPct);
+      },
+
+      finishLesson() {
+        const topicId = this.state.currentTopicId;
+        const topics = this.getTopicsForLevel(this.state.currentLevel);
+        const topic = topics.find(t => t.id === topicId);
+
+        if (topic) {
+          this.state.completedTopics[topic.id] = (this.state.completedTopics[topic.id] || 0) + 1;
+          (topic.words || []).forEach(w => {
+            this.state.masteredWords[w.hz] = true;
+          });
+          this.saveStorage();
+
+          document.getElementById("complete-topic-title").textContent = topic.title;
+          document.getElementById("complete-words-count").textContent = `+${(topic.words || []).length}`;
+        }
+
+        this.updateLeftRail(100);
+        SoundEngine.playVictory();
+        Confetti.launch();
+        this.switchScreen("screen-complete");
+      }
+    };
+
+    window.addEventListener("DOMContentLoaded", () => {
+      App.init();
+    });
+  </script>
+</body>
+</html>
+```
